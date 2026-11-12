@@ -1,115 +1,143 @@
-> **Đây là bản sao đóng băng (starter) dùng cho Bài kiểm tra Hackathon (BKT-2 /
-> Track B) môn Kỹ thuật Phần mềm Ứng dụng (KTPMUD) — KHÔNG phải ứng dụng thật
-> đang vận hành, không kết nối tới dữ liệu/CSDL production thật.** Toàn bộ tên
-> người và ảnh thật trong bản gốc đã được thay bằng dữ liệu hư cấu trước khi
-> công khai repo này. Sinh viên làm việc trên fork của repo NÀY, nộp bài qua
-> `ktpmud-project` theo đúng hướng dẫn `nop_bai.md` của KTPMUD — không PR vào
-> ứng dụng Vườn Toán thật.
+# 🌱 Vườn Toán Lớp 3 — Track B: "Ước lượng trước khi tính đúng"
+
+> **Báo cáo Bài kiểm tra Hackathon (BKT-2 / Track B) môn Kỹ thuật Phần mềm Ứng dụng (KTPMUD)**  
+> **Sinh viên thực hiện:** Bùi Thanh Lâm  
+> **Phạm vi:** Mở rộng dạng bài luyện tập "Ước lượng kết quả trước khi tính đúng" trên nền tảng Vườn Toán Lớp 3, tuân thủ các quy định về dữ liệu synthetic và bảo mật thông tin (không PII).
 
 ---
 
-# 🌱 Vườn Toán Lớp 3 — Trường Tiểu học Hoàng Mai
+## 1. Hướng dẫn chạy dự án (Node.js thuần)
 
-Web học Toán lớp 3 gồm giao diện học sinh (bài học, luyện tập, kiểm tra, trò chơi, bảng xếp hạng)
-và khu vực giáo viên (theo dõi lớp, cấp tài khoản). Đợt 1 đã nối **backend thật**:
-đăng nhập/đăng xuất, chấm điểm trên server, lưu điểm & tiến độ vào cơ sở dữ liệu SQLite.
+Dự án được tối ưu hóa để chạy trực tiếp trên môi trường **Node.js (18+)**, bao gồm cơ chế tự động tương thích với SQLite tích hợp sẵn (`node:sqlite` trên Node.js 22.5+/24+) mà **không cần cài đặt Docker** hay các công cụ biên dịch C++ (Visual Studio Build Tools).
 
-## 1. Cách chạy
-
-Yêu cầu: máy có **Node.js 18+**.
-
+### Các bước khởi động:
 ```bash
-npm install     # chỉ cần chạy 1 lần đầu
-npm start       # mở http://localhost:3000
+# 1. Cài đặt thư viện (chỉ cần chạy lần đầu)
+npm install
+
+# 2. Khởi động server
+npm start
 ```
 
-Lần chạy đầu, server tự tạo `data/vuon-toan.db` và nạp dữ liệu mẫu từ `data/seed.json`.
+- Mở trình duyệt và truy cập: **[http://localhost:3000](http://localhost:3000)**
+- Lần chạy đầu tiên, server tự động tạo cơ sở dữ liệu `data/vuon-toan.db` và nạp 100 tài khoản mẫu cùng toàn bộ dữ liệu bài học từ `data/seed.json`.
 
-### Tài khoản mẫu
+### Tài khoản mẫu thử nghiệm (Synthetic):
 
 | Vai trò | Tên đăng nhập | Mật khẩu | Ghi chú |
 |---|---|---|---|
-| Học sinh | `hocsinh01` … `hocsinh99` | `123456` | 99 tài khoản giả lập lớp 3A2, dùng cho test/demo hackathon — không phải học sinh thật |
-| Giáo viên | `giaovien01` | `123456` | Vào thẳng Góc Giáo Viên |
+| Học sinh | `hocsinh01` … `hocsinh99` | `123456` | 99 tài khoản học sinh giả lập lớp 3A2 |
+| Giáo viên | `giaovien01` | `123456` | Đăng nhập vào Góc Giáo Viên |
 
-> Khi đưa lên Internet thật: đổi mật khẩu các tài khoản mẫu, và đặt biến môi trường
-> `SESSION_SECRET` bằng một chuỗi bí mật dài trước khi chạy `npm start`.
-
-## 2. Cấu trúc thư mục
-
-```
-vuon-toan-lop-3/
-├─ public/                    # Giao diện (server phục vụ thư mục này)
-│  ├─ *.html                  # Mỗi trang 1 file, CHỈ chứa nội dung trang
-│  └─ assets/
-│     ├─ css/app.css          # CSS nền dùng chung (trước đây lặp trong 11 file)
-│     └─ js/
-│        ├─ tailwind.config.js  # Cấu hình Tailwind dùng chung 1 chỗ duy nhất
-│        ├─ core/  (api.js = gọi API, app.js = đăng nhập + nối link, game-score.js = lưu điểm game)
-│        ├─ components/ (navbar.js, sidebar.js=bản đồ link, footer.js dùng chung)
-│        └─ pages/  (logic riêng từng trang: login.js, exercise.js, exam.js,...)
-├─ public/lesson.html       # Trang làm bài chung cho bộ đề giáo viên tự tạo
-├─ server/
-│  ├─ index.js   # Điểm vào: API /api/* + phục vụ giao diện
-│  ├─ db.js      # Tạo bảng + nạp dữ liệu mẫu vào SQLite
-│  ├─ auth.js    # Cookie đăng nhập httpOnly, băm mật khẩu bcrypt
-│  └─ api.js     # Toàn bộ API (đăng nhập, bài học, nộp bài, giáo viên...)
-├─ data/
-│  ├─ seed.json      # DỮ LIỆU GỐC: tài khoản mẫu, bài học, câu hỏi
-│  └─ vuon-toan.db   # CSDL SQLite (tự sinh khi chạy; sao lưu = chép file này)
-├─ tools/build-from-original.py  # Dựng lại giao diện từ bản gốc khi cần
-├─ original-backup/  # NGUYÊN BẢN code cũ trước khi sửa (để đối chiếu/khôi phục)
-└─ HUONG-DAN-THEM-BAI.md  # Cách thêm bài học/câu hỏi mới
+*Lệnh khôi phục CSDL về mặc định:*
+```bash
+npm run reset-db
 ```
 
-## 3. API chính
+---
 
-| Method | Đường dẫn | Mô tả |
+## 2. Phân tích yêu cầu bài toán (Requirements Analysis — Track B)
+
+### 2.1. Bối cảnh & Mục tiêu nghiệp vụ
+Trong chương trình Toán lớp 3, kỹ năng "ước lượng kết quả" (như làm tròn số để ước tính tích hoặc thương trước khi tính toán chi tiết) đóng vai trò then chốt giúp học sinh hình thành tư duy định lượng và phát hiện sai sót tính toán thô.
+
+**Yêu cầu cốt lõi:**
+Bổ sung dạng bài luyện tập **"Ước lượng trước khi tính đúng"** áp dụng cho các phép nhân/chia đã có trong chương trình. Học sinh bắt buộc phải nhập một khoảng hoặc giá trị ước lượng hợp lý trước, sau đó mới thực hiện bước tính chính xác và nhận phản hồi phân biệt rõ ràng cho cả hai bước.
+
+### 2.2. Ma trận đối chiếu tiêu chí nghiệm thu (Acceptance Criteria Traceability)
+
+| Mã tiêu chí | Nội dung tiêu chí | Giải pháp đáp ứng trong thiết kế |
 |---|---|---|
-| POST | `/api/auth/login` · `/api/auth/logout` | Đăng nhập (cookie httpOnly) / đăng xuất |
-| GET | `/api/auth/me` | Thông tin người đang đăng nhập |
-| GET | `/api/lessons`, `/api/me/progress` | Bài học kèm tiến độ, khóa/mở theo thứ tự |
-| GET | `/api/question-sets/:id/questions` | Câu hỏi — **không kèm đáp án** |
-| POST | `/api/submissions` | Nộp bài; server chấm, lưu điểm, cộng sao theo tiến bộ |
-| GET | `/api/leaderboard` | Bảng xếp hạng tính từ sao thật trong DB |
-| GET/POST | `/api/teacher/students` | Giáo viên xem / cấp tài khoản học sinh |
-| POST | `/api/teacher/students/:id/reset-password` | Giáo viên đặt lại mật khẩu |
+| **B-01** | Truy cập được từ luồng học hiện có | Tích hợp trực tiếp vào trang làm bài luyện tập `exercise.html` và `lesson.html`, không dùng trang demo tách rời. |
+| **B-02** | Tối thiểu 12 câu hỏi/fixtures synthetic tái lập được | Xây dựng bộ đề gồm 12 câu hỏi phép nhân/chia lớp 3 với số liệu chuẩn trong `seed.json`. |
+| **B-03** | Quy tắc tạo và chấm tất định, test được | Quy định khoảng ước lượng hợp lý theo quy tắc làm tròn chục/trăm rõ ràng, không dùng LLM. |
+| **B-04** | API không trả đáp án đúng trước khi nộp | Endpoint `GET /api/question-sets/:id/questions` lọc bỏ hoàn toàn trường `correct_answer`. |
+| **B-05** | Server chấm và lưu kết quả bền vững | Xử lý logic chấm tại `POST /api/submissions`, lưu vào bảng `attempts` và `progress`, không mất khi F5. |
+| **B-06** | Feedback phân biệt ước lượng vs tính đúng | Trả về chi tiết: `estimateValid` (ước lượng hợp lý hay không) và `exactCorrect` (tính đúng hay sai). |
+| **B-07** | Không sửa auth, session, tài khoản mẫu | Giữ nguyên nguyên vẹn `server/auth.js`, các bảng người dùng và cơ chế đăng nhập. |
+| **B-08** | Test tự động normal, boundary, invalid | Bộ kiểm thử tự động kiểm tra các trường hợp cận khoảng, đầu vào không hợp lệ, chấm điểm. |
+| **B-09** | Bổ sung lệnh `npm test` | Cấu hình script kiểm thử tự động chạy từ clean checkout. |
+| **B-10** | CI chạy test trên Pull Request | File `.github/workflows/ci.yml` kiểm tra build và test tự động. |
+| **B-11** | Không chứa PII/secret | 100% dữ liệu danh tính học sinh, giáo viên là synthetic (`hocsinh01`, `giaovien01`). |
+| **B-12** | Hỗ trợ điều hướng bàn phím & thông báo lỗi rõ | Form nhập liệu hỗ trợ phím Tab/Enter, phản hồi lỗi dễ hiểu cho học sinh lớp 3. |
 
-## 4. Đã làm ở Đợt 1 (cốt lõi)
+---
 
-- Tách cấu hình Tailwind + CSS + JS dùng chung (trước: sao chép vào cả 11 file HTML);
-  sửa tên file sai chính tả (`excersise→exercise`, `leadboard→leaderboard`, `schudule→schedule`).
-- Nối lại toàn bộ link menu từng là `href="#"` sang trang thật.
-- Backend Node.js + Express + SQLite; mật khẩu băm bcrypt; phân quyền học sinh/giáo viên.
-- Trang chủ render bài học từ API; luyện tập & kiểm tra (20 câu, đếm giờ, tự nộp khi hết giờ)
-  chấm điểm trên server và lưu tiến độ — tải lại trang không mất điểm.
-- Góc Giáo Viên: xem danh sách lớp với điểm trung bình thật, **cấp tài khoản + đặt lại mật khẩu** cho học sinh.
+## 3. Quyết định thiết kế kiến trúc (Architecture & Design Decisions)
 
-## 5. Đợt 2 (đã hoàn thành)
+### 3.1. Quyết định mở rộng Schema dữ liệu (Data Model Decision)
+* **Hiện trạng (`docs/architecture-reference.md`):** Bảng `questions` hiện có 4 loại (`multiple-choice`, `input`, `compare`, `paint`) với cơ chế so sánh chuỗi đẳng thức tuyệt đối (`given === correct_answer`).
+* **Giải pháp lựa chọn:** Thêm `type = 'estimate'` vào trường `type` của bảng `questions`.
+* **Cấu trúc trường `correct_answer`:** Thay vì tạo cột mới trong CSDL gây xáo trộn schema, định dạng chuỗi JSON được lưu trong cột `correct_answer`:
+  ```json
+  {
+    "range": [40, 50],
+    "exact": 42,
+    "tolerance_rule": "round_ten"
+  }
+  ```
+  *Lý do lựa chọn:* Đảm bảo tính tương thích ngược hoàn hảo với SQLite hiện tại, không yêu cầu migration phức tạp bảng `questions`.
 
-- **4 mini-game chơi thật & lưu điểm**: Bắn Bóng (10 vòng phép nhân), Đua Xe (chọn cổng đáp án),
-  Lật Thẻ Trí Nhớ (ghép cặp phép tính–kết quả), Câu Cá (10 vòng phép chia). Điểm gửi lên server,
-  sao chỉ cộng theo phần vượt kỷ lục cũ của từng em.
-- **Bảng xếp hạng render 100% từ dữ liệu thật** (`/api/leaderboard`): hạng, lượt làm bài, điểm TB, tổng sao.
-- **Trang làm bài chung `lesson.html`**: mọi bộ đề giáo viên tạo đều làm được tại đây
-  (`lesson.html?lesson=bai-16&set=...`), hỗ trợ trắc nghiệm / điền số / điền dấu / tô màu.
-- **Quản trị trên web (Góc Giáo Viên)**: thêm/sửa/xóa bài học, tạo bộ đề, thêm/sửa/xóa câu hỏi,
-  xuất báo cáo lớp ra CSV mở bằng Excel. Học sinh không vào được khu vực này.
+### 3.2. Thuật toán chấm điểm tất định trên Server (Scoring Logic)
+* **Quy tắc ước lượng:**
+  - Đối với phép nhân $a \times b$ (ví dụ: $6 \times 7 = 42$): Học sinh ước lượng bằng cách làm tròn một thừa số về hàng chục gần nhất (ví dụ: $6 \times 10 = 60$ hoặc trong khoảng $[35, 50]$). Khoảng chấp nhận được `[min_est, max_est]` được định nghĩa sẵn và tất định.
+* **Cơ chế tính điểm 2 giai đoạn (Tổng điểm $P$):**
+  - **Điểm ước lượng ($40\% P$):** Nhận trọn điểm khi giá trị học sinh nhập nằm trong đoạn $[min, max]$.
+  - **Điểm tính đúng ($60\% P$):** Nhận trọn điểm khi giá trị tính đúng bằng `exact`.
+* **Định dạng dữ liệu nộp từ Client (`answers[q.id]`):**
+  ```json
+  {
+    "estimate": 40,
+    "exact": 42
+  }
+  ```
 
-## 6. Đợt 3 (đã hoàn thành)
+### 3.3. Luồng tương tác người dùng (User Experience Flow)
+1. **Bước 1 (Ước lượng):** Học sinh đọc đề (ví dụ: "Ước lượng $29 \times 4$"). Học sinh nhập khoảng dự đoán (ví dụ: 100 - 130).
+2. **Bước 2 (Tính toán chính xác):** Sau khi xác nhận ước lượng, ô nhập kết quả chính xác được kích hoạt (học sinh nhập 116).
+3. **Bước 3 (Phản hồi sư phạm):** Giao diện phân tách hai lời nhận xét:
+   - *Về ước lượng:* "Rất tốt! Ước lượng của em rất gần với thực tế."
+   - *Về kết quả:* "Chính xác! $29 \times 4 = 116$."
 
-- **Đăng nhập dự phòng 2 lớp**: cookie httpOnly + Bearer token trong trình duyệt
-  (tự động dùng khi cookie bị chặn, ví dụ xem qua khung iframe/xem trước).
-- **Thống kê lớp thật** (`/api/teacher/analytics`): 4 thẻ KPI đầu trang Góc Giáo Viên đã là số thật,
-  thêm biểu đồ lượt làm bài 7 ngày, top 3 dạng bài hay sai nhất, tiến độ từng bài học.
-  Hai khối biểu đồ/chẩn đoán mẫu cũ được ẩn để tránh nhầm số liệu.
-- **CSS Tailwind tĩnh** (`assets/css/tailwind.build.css`, chạy `npm run build:css` để gói lại):
-  phòng máy mất Internet giao diện vẫn giữ nguyên; CDN chỉ còn là lớp dự phòng.
-- **Sẵn sàng deploy**: endpoint `/api/health`, hỗ trợ `DB_PATH` cho ổ đĩa bền,
-  `Dockerfile` + `DEPLOY.md` (VPS/Render/Railway, việc cần làm với `SESSION_SECRET` và mật khẩu mẫu).
+---
 
-## 7. Nếu muốn làm tiếp
+## 4. Cấu trúc thư mục dự án
 
-- Nhúng font/icon tại chỗ để offline 100% cả chữ và biểu tượng.
-- Thực hiện deploy thật (cần tài khoản hosting/tên miền của trường).
-- Thêm biểu đồ theo tuần/tháng và xuất phiếu bồi dưỡng PDF theo dạng bài hay sai.
+```text
+vuon-toan-lop-3/
+├─ public/                    # Giao diện tĩnh (HTML/CSS/JS thuần)
+│  ├─ *.html                  # Giao diện học sinh (exercise, lesson, home, leaderboard...)
+│  └─ assets/
+│     ├─ css/app.css          # CSS nền tảng dùng chung
+│     └─ js/
+│        ├─ core/             # api.js, app.js
+│        ├─ components/       # navbar.js, sidebar.js, footer.js
+│        └─ pages/            # Logic các trang: exercise.js, login.js,...
+├─ server/
+│  ├─ index.js                # Express app entry point
+│  ├─ db.js                   # Kết nối SQLite (hỗ trợ better-sqlite3 và node:sqlite)
+│  ├─ auth.js                 # Session & xác thực (không sửa đổi theo B-07)
+│  └─ api.js                  # API routes và logic chấm bài (/api/submissions)
+├─ data/
+│  ├─ seed.json               # Dữ liệu gốc: tài khoản, bài học, câu hỏi mẫu
+│  └─ vuon-toan.db            # File SQLite CSDL (tự sinh khi khởi chạy)
+├─ docs/
+│  └─ architecture-reference.md # Đặc tả hệ thống chuẩn từ đề thi
+├─ AI_USE.md                  # Nhật ký sử dụng AI (Mục 5.3)
+├─ DEPLOY.md                  # Hướng dẫn triển khai
+└─ package.json               # Cấu hình dự án và dependencies
+```
+
+---
+
+## 5. API chính của hệ thống
+
+| Method | Đường dẫn | Mô tả chức năng |
+|---|---|---|
+| POST | `/api/auth/login` · `/api/auth/logout` | Đăng nhập cookie httpOnly và đăng xuất |
+| GET | `/api/auth/me` | Lấy thông tin phiên đăng nhập người dùng |
+| GET | `/api/lessons`, `/api/me/progress` | Danh sách bài học và tiến độ đã lưu của học sinh |
+| GET | `/api/question-sets/:id/questions` | Lấy danh sách câu hỏi (**bảo mật, không trả đáp án**) |
+| POST | `/api/submissions` | Nộp bài làm; server chấm điểm tất định, lưu vào DB và cộng sao |
+| GET | `/api/leaderboard` | Bảng xếp hạng học sinh tính từ điểm và sao thật trong CSDL |
+| GET/POST | `/api/teacher/students` | Góc giáo viên: xem danh sách và cấp tài khoản |

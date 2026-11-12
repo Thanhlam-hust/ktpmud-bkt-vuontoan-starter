@@ -6,7 +6,78 @@
  */
 const fs = require('fs');
 const path = require('path');
-const Database = require('better-sqlite3');
+let Database;
+
+try {
+  Database = require('better-sqlite3');
+} catch (_) {
+  // Node.js 22.5+ / 24+ có sẵn module node:sqlite tích hợp (không cần cài thêm C++ compiler)
+  const { DatabaseSync } = require('node:sqlite');
+
+  class NodeSqliteAdapter {
+    constructor(filePath) {
+      this._db = new DatabaseSync(filePath);
+    }
+    pragma(sql) {
+      return this._db.exec('PRAGMA ' + sql);
+    }
+    exec(sql) {
+      return this._db.exec(sql);
+    }
+    prepare(sql) {
+      const rawStmt = this._db.prepare(sql);
+      try { rawStmt.setAllowBareNamedParameters(true); } catch (_) {}
+      try { rawStmt.setAllowUnknownNamedParameters(true); } catch (_) {}
+
+      const sanitize = (val) => {
+        if (val === undefined) return null;
+        if (val !== null && typeof val === 'object' && !Array.isArray(val) && !Buffer.isBuffer(val)) {
+          const obj = {};
+          for (const [k, v] of Object.entries(val)) {
+            obj[k] = v === undefined ? null : v;
+          }
+          return obj;
+        }
+        return val;
+      };
+
+      const normalizeArgs = (args) => {
+        if (args.length === 1 && Array.isArray(args[0])) {
+          return args[0].map(sanitize);
+        }
+        return args.map(sanitize);
+      };
+
+      return {
+        run(...args) {
+          return rawStmt.run(...normalizeArgs(args));
+        },
+        get(...args) {
+          return rawStmt.get(...normalizeArgs(args));
+        },
+        all(...args) {
+          return rawStmt.all(...normalizeArgs(args));
+        }
+      };
+    }
+    transaction(fn) {
+      const self = this;
+      return function (...args) {
+        self._db.exec('BEGIN');
+        try {
+          const res = fn.apply(this, args);
+          self._db.exec('COMMIT');
+          return res;
+        } catch (err) {
+          self._db.exec('ROLLBACK');
+          throw err;
+        }
+      };
+    }
+  }
+
+  Database = NodeSqliteAdapter;
+}
 const bcrypt = require('bcryptjs');
 
 // Khi deploy lên hosting có ổ đĩa bền (persistent disk), đặt DB_PATH trỏ vào đó

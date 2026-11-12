@@ -1,53 +1,65 @@
-# Hướng dẫn đưa Vườn Toán lên Internet
+# Hướng dẫn Triển khai Vườn Toán Lớp 3 (Node.js thuần)
 
-> Trạng thái hiện tại: web đã chạy hoàn chỉnh trên máy/localhost. Để học sinh vào được
-> từ nhà, cần đặt server Node.js này lên một máy chủ có địa chỉ công khai.
-> **Không** dùng được GitHub Pages/Netlify tĩnh vì web cần backend + CSDL.
+> Dự án: Vườn Toán Lớp 3  
+> Sinh viên thực hiện: Bùi Thanh Lâm  
+> Môi trường: Node.js 18+ (hỗ trợ trực tiếp Node 20, 22, 24 với SQLite tích hợp)
 
-## Việc bắt buộc trước khi public
+---
 
-1. Đặt biến môi trường `SESSION_SECRET` = một chuỗi bí mật dài, ngẫu nhiên (ký cookie đăng nhập).
-2. Đăng nhập `giaovien01/123456` và tạo tài khoản giáo viên thật, sau đó nhờ quản trị vô hiệu
-   tài khoản mẫu trong CSDL (hoặc đổi mật khẩu bằng cách đặt lại trong DB).
-   Học sinh mẫu `hocsinh01` cũng nên đổi mật khẩu nếu giữ lại.
-3. Chọn nơi chứa file CSDL **bền vững** (không bị xóa khi server khởi động lại):
-   - Docker/VPS: gắn volume vào `/data` (Dockerfile đã cấu hình sẵn `DB_PATH=/data/vuon-toan.db`).
-   - Render/Railway: gắn Persistent Disk/Volume và đặt biến `DB_PATH` trỏ vào thư mục đó.
-   - Nếu không gắn ổ bền, mỗi lần deploy lại sẽ mất hết điểm học sinh.
+## 1. Lưu ý quan trọng trước khi đưa lên môi trường mạng
 
-## Cách A — VPS (ổn định nhất cho trường học)
+1. **Biến môi trường `SESSION_SECRET`**:
+   - Cần thiết lập biến môi trường `SESSION_SECRET` bằng một chuỗi ngẫu nhiên dài để mã hóa và ký cookie phiên đăng nhập an toàn.
+2. **Cơ sở dữ liệu bền vững (Persistent Storage)**:
+   - File CSDL SQLite được lưu mặc định tại `data/vuon-toan.db`.
+   - Nếu triển khai trên các nền tảng đám mây (Render, Railway, VPS), bạn có thể cấu hình biến môi trường `DB_PATH` trỏ tới đường dẫn ổ đĩa gắn ngoài (Persistent Disk / Volume) để đảm bảo điểm số và tài khoản không bị xóa khi dịch vụ khởi động lại:
+     ```bash
+     DB_PATH=/var/data/vuon-toan.db
+     ```
+3. **Bảo mật tài khoản**:
+   - Đổi mật khẩu tài khoản mẫu `giaovien01` và các tài khoản học sinh sau khi thiết lập xong môi trường production.
 
-```bash
-# Trên VPS Ubuntu có Docker:
-docker build -t vuon-toan .
-docker run -d --name vuon-toan -p 3000:3000 \
-  -e SESSION_SECRET="chuoi-bi-mat-cua-ban" \
-  -v vuon-toan-data:/data vuon-toan
-```
+---
 
-Sau đó trỏ tên miền về VPS và dùng Caddy/Nginx làm HTTPS (cookie đăng nhập cần HTTPS).
+## 2. Triển khai trên máy chủ Linux / VPS (Node.js thuần)
 
-## Cách B — Render / Railway (dễ, không quản server)
+1. **Cài đặt Node.js**:
+   Cài đặt Node.js 18 hoặc mới hơn trên máy chủ Ubuntu/Debian:
+   ```bash
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+   ```
 
-1. Đưa thư mục này lên GitHub.
-2. Tạo Web Service từ repo, môi trường Docker (repo đã có Dockerfile) hoặc Node:
-   - Build: `npm ci` — Start: `npm start`
-3. Thêm Persistent Disk (ví dụ mount tại `/data`) và đặt các biến:
-   - `SESSION_SECRET` = chuỗi bí mật
-   - `DB_PATH=/data/vuon-toan.db`
-   - `NODE_ENV=production`
-4. Kiểm tra `https://ten-mien-cua-ban/api/health` trả về `{"ok":true}` là server sống.
+2. **Tải mã nguồn và cài đặt dependencies**:
+   ```bash
+   git clone <url-repo-cua-ban>
+   cd ktpmud-bkt-vuontoan-starter
+   npm install
+   ```
 
-## Kiểm tra sau khi deploy
+3. **Chạy dịch vụ với PM2 (Quản lý tiến trình nền tự khởi động lại)**:
+   ```bash
+   sudo npm install -g pm2
+   SESSION_SECRET="chuoi-bi-mat-rat-dai-va-an-toan" pm2 start server/index.js --name "vuon-toan"
+   pm2 startup
+   pm2 save
+   ```
 
-- Mở trang, đăng nhập `hocsinh01/123456` (trước khi đổi mật khẩu mẫu).
-- Làm 1 bài luyện tập, tải lại trang — điểm vẫn còn là CSDL bền vững đã đúng.
-- Tắt/bật lại service một lần và kiểm tra lại điểm để chắc chắn volume hoạt động.
+4. **Cấu hình Nginx làm Reverse Proxy và cấp HTTPS (khuyên dùng)**:
+   - Trỏ port 80/443 của Nginx về `http://localhost:3000`.
+   - Sử dụng Certbot để tự động cấp chứng chỉ SSL miễn phí từ Let's Encrypt.
 
-## Chạy offline trong phòng máy (không Internet)
+---
 
-- Giao diện đã có CSS tĩnh `public/assets/css/tailwind.build.css` nên không cần CDN Tailwind.
-- Chỉ còn font chữ/icon của Google Fonts cần Internet; mất mạng thì web vẫn dùng được,
-  font sẽ lùi về font hệ thống và một số icon có thể hiển thị thành chữ — nên ưu tiên
-  có mạng, hoặc cân nhắc nhúng font tại chỗ ở đợt sau.
-- Sau khi sửa giao diện có thêm class Tailwind mới, chạy `npm run build:css` để gói lại CSS.
+## 3. Triển khai trên nền tảng Cloud (Render / Railway)
+
+1. Kết nối kho lưu trữ GitHub của bạn với Render hoặc Railway.
+2. Thiết lập cấu hình dịch vụ dạng **Web Service**:
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+3. Thêm các biến môi trường trong phần **Environment Variables**:
+   - `NODE_ENV`: `production`
+   - `SESSION_SECRET`: `<chuỗi-ngẫu-nhiên-bảo-mật>`
+4. Gắn Persistent Disk và cấu hình đường dẫn qua biến `DB_PATH`.
+5. Kiểm tra trạng thái hoạt động của server qua endpoint:
+   `https://<domain-cua-ban>/api/health` trả về `{"ok":true}` là hoàn tất.
